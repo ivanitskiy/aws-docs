@@ -7,7 +7,7 @@
  * kubectl
 
 
-## Deploing k8s cluster using kops
+## Deploying k8s cluster using kops
 
 ## Configuring IAM permissions
 
