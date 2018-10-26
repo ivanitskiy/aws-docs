@@ -1,0 +1,83 @@
+---
+# Source: kube2iam/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: kube2iam
+  name: kube2iam
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  labels:
+    app: kube2iam
+  name: kube2iam
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+      - pods
+    verbs:
+      - list
+      - watch
+      - get
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: kube2iam
+  name: kube2iam
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kube2iam
+subjects:
+  - kind: ServiceAccount
+    name: kube2iam
+    namespace: kube-system
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kube2iam
+  labels:
+    app: kube2iam
+spec:
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      name: kube2iam
+  template:
+    metadata:
+      labels:
+        name: kube2iam
+    spec:
+      hostNetwork: true
+      serviceAccountName: kube2iam
+      containers:
+        - image: jtblin/kube2iam:latest
+          name: kube2iam
+          args:
+            - "--auto-discover-base-arn"
+            # - "--host-interface=cni+"
+            - "--host-interface=eni+"
+            - "--host-ip=$(HOST_IP)"
+            - "--iptables=true"
+            # - "--verbose"
+            # - "--debug"
+          env:
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          securityContext:
+            privileged: true
+          ports:
+            - containerPort: 8181
+              hostPort: 8181
+              name: http
